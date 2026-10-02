@@ -3,12 +3,31 @@
 Esecuzione:  python examples/esempio_cybersecurity.py
 """
 
-from risk_analysis import CYBERSECURITY, PERT, Asset, Mode, RiskRegister, simulate
+from pathlib import Path
+
+from risk_analysis import CYBERSECURITY, PERT, Asset, ImpactCriteria, Mode, RiskRegister, simulate
 from risk_analysis import availability_from_downtime as disp
 from risk_analysis.domains.cybersecurity import ale, rosi, sle
 
 dominio = CYBERSECURITY
 
+print("=" * 70)
+print("0. Criteri di impatto dell'organizzazione (config/criteri_impatto.json)")
+print("=" * 70)
+criteri = ImpactCriteria.load(Path(__file__).parent.parent / "config" / "criteri_impatto.json")
+print(criteri.describe())
+print()
+crm = Asset.from_estimates(
+    "CRM commerciale",
+    loss_confidentiality=80_000,   # sanzioni e danno d'immagine se i dati escono
+    loss_integrity=15_000,         # ricostruzione dei dati alterati
+    tolerable_hours=36,
+    criteria=criteri,
+)
+print(crm.describe(criteri))
+print(f"Danno tipico di un data breach (solo R): "
+      f"{crm.impact_loss('R', criteri):,.0f} €".replace(",", "."))
+print()
 print("=" * 70)
 print("1. Asset con il loro profilo R, I, D (scale 1-5)")
 print("=" * 70)

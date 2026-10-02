@@ -21,6 +21,7 @@ from enum import Enum
 from typing import Iterable, Optional, Tuple, Union
 
 from ..core import Mode, RiskResult, Scale
+from ..criteria import DEFAULT_CRITERIA, ImpactCriteria
 from ..models import RiskModel
 
 
@@ -76,18 +77,15 @@ SCALE_A = Scale(
 
 SCALES = {CIA.C: SCALE_C, CIA.I: SCALE_I, CIA.A: SCALE_A}
 
-# Ore di fermo tollerabile che delimitano i livelli di disponibilità (dal 5 al 2)
-_AVAILABILITY_HOURS = ((4, 5), (24, 4), (72, 3), (168, 2))
 
+def availability_from_downtime(
+    tolerable_hours: float, criteria: ImpactCriteria = DEFAULT_CRITERIA
+) -> int:
+    """Livello di disponibilità (1-5) dato il fermo massimo tollerabile, in ore.
 
-def availability_from_downtime(tolerable_hours: float) -> int:
-    """Livello di disponibilità (1-5) dato il fermo massimo tollerabile, in ore."""
-    if tolerable_hours <= 0:
-        raise ValueError("Il fermo tollerabile deve essere positivo")
-    for limit, level in _AVAILABILITY_HOURS:
-        if tolerable_hours < limit:
-            return level
-    return 1
+    Le soglie in ore sono quelle dei criteri dell'organizzazione.
+    """
+    return criteria.level_from_downtime(tolerable_hours)
 
 
 DimensionSpec = Union[str, CIA]
@@ -141,16 +139,89 @@ class Asset:
         """M = massimo tra le sole dimensioni colpite dallo scenario."""
         return max(self.level(d) for d in _parse_dimensions(affects))
 
-    def describe(self) -> str:
+    def impact_loss(
+        self, affects: Iterable[DimensionSpec], criteria: ImpactCriteria = DEFAULT_CRITERIA
+    ) -> float:
+        """Danno tipico in euro dell'impatto dello scenario, secondo i criteri.
+
+        Utile come stima di prima approssimazione della SLE quando non si ha
+        una valutazione economica diretta.
+        """
+        return criteria.representative_loss(self.impact(affects))
+
+    @classmethod
+    def from_estimates(
+        cls,
+        name: str,
+        loss_confidentiality: float,
+        loss_integrity: float,
+        tolerable_hours: Optional[float] = None,
+        loss_availability: Optional[float] = None,
+        criteria: ImpactCriteria = DEFAULT_CRITERIA,
+        value: Optional[float] = None,
+    ) -> "Asset":
+        """Crea l'asset dalle stime di danno in euro, tradotte in livelli dai criteri.
+
+        Per la disponibilità si può indicare il fermo tollerabile in ore
+        (``tolerable_hours``), il danno in euro (``loss_availability``) o
+        entrambi: in quest'ultimo caso vale il livello più alto, per prudenza.
+        """
+        levels = []
+        if tolerable_hours is not None:
+            levels.append(criteria.level_from_downtime(tolerable_hours))
+        if loss_availability is not None:
+            levels.append(criteria.level_from_loss(loss_availability))
+        if not levels:
+            raise ValueError("Per la disponibilità serve tolerable_hours oppure loss_availability")
+        return cls(
+            name=name,
+            confidentiality=criteria.level_from_loss(loss_confidentiality),
+            integrity=criteria.level_from_loss(loss_integrity),
+            availability=max(levels),
+            value=value,
+        )
+
+    def describe(self, criteria: Optional[ImpactCriteria] = None) -> str:
+        """Profilo leggibile. Con ``criteria`` mostra le fasce dell'organizzazione
+        (euro per riservatezza e integrità, ore di fermo per la disponibilità)
+        invece delle descrizioni standard."""
         lines = [f"Asset: {self.name}"]
         for dim in CIA:
             scale = SCALES[dim]
             lvl = self.level(dim)
-            lines.append(
-                f"  {dim.value:<14} {lvl}  {scale.label(lvl):<13} "
-                f"{scale.descriptions[lvl - scale.minimum]}"
-            )
+            if criteria is None:
+                text = scale.descriptions[lvl - scale.minimum]
+            elif dim is CIA.A:
+                text = _downtime_text(lvl, criteria)
+            else:
+                text = _loss_text(lvl, criteria)
+            lines.append(f"  {dim.value:<14} {lvl}  {scale.label(lvl):<13} {text}")
         return "\n".join(lines)
+
+
+def _money(x: float, currency: str) -> str:
+    return f"{x:,.0f}".replace(",", ".") + f" {currency}"
+
+
+def _loss_text(level: int, criteria: ImpactCriteria) -> str:
+    low, high = criteria.loss_range(level)
+    c = criteria.currency
+    if level == 1:
+        return f"danno fino a {_money(high, c)}"
+    if level == 5:
+        return f"danno oltre {_money(low, c)}"
+    return f"danno da {_money(low, c)} a {_money(high, c)}"
+
+
+def _downtime_text(level: int, criteria: ImpactCriteria) -> str:
+    h = criteria.downtime_hours
+    return {
+        5: f"fermo tollerabile sotto {h[0]:g} ore",
+        4: f"fermo tollerabile da {h[0]:g} a {h[1]:g} ore",
+        3: f"fermo tollerabile da {h[1]:g} a {h[2]:g} ore",
+        2: f"fermo tollerabile da {h[2]:g} a {h[3]:g} ore",
+        1: f"fermo tollerabile di {h[3]:g} ore o più",
+    }[level]
 
 
 def assess_scenario(

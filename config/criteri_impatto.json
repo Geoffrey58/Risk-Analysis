@@ -1,0 +1,9 @@
+{
+  "_istruzioni": "Copia questo file, rinominalo (es. criteri_nome_azienda.json) e adatta i valori all'organizzazione. Le chiavi che iniziano con _ sono solo note e vengono ignorate.",
+  "_soglie_economiche": "Limiti superiori, in valuta, dei livelli di impatto 1, 2, 3 e 4. Oltre l'ultimo valore il livello è 5. Valori positivi e crescenti.",
+  "_fermo_tollerabile_ore": "Limiti in ore per la disponibilità: sotto il 1° valore livello 5, sotto il 2° livello 4, sotto il 3° livello 3, sotto il 4° livello 2, altrimenti 1.",
+  "organizzazione": "Esempio",
+  "valuta": "€",
+  "soglie_economiche": [2000, 10000, 50000, 250000],
+  "fermo_tollerabile_ore": [4, 24, 72, 168]
+}

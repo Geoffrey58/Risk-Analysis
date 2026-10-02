@@ -5,6 +5,7 @@ P = probabilità dell'evento, M = magnitudo del danno, V = vulnerabilità del si
 
 from .classification import Classifier
 from .core import Mode, RiskInput, RiskResult, Scale
+from .criteria import DEFAULT_CRITERIA, ImpactCriteria
 from .domains import (
     CIA,
     CYBERSECURITY,
@@ -34,6 +35,8 @@ __all__ = [
     "RiskInput",
     "RiskResult",
     "Scale",
+    "ImpactCriteria",
+    "DEFAULT_CRITERIA",
     "Domain",
     "DOMAINS",
     "CYBERSECURITY",

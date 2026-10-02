@@ -157,9 +157,55 @@ reg.add_scenario("C02", "Guasto hardware", server, affects="A", P=2, V=4)
 ```
 
 Le dimensioni si indicano con le lettere `"C"`, `"I"`, `"A"` oppure, all'italiana,
-`"R"`, `"I"`, `"D"`. Consiglio pratico: ancora ogni livello anche a una soglia
-economica dell'organizzazione (es. livello 3 = danno tra 10 e 50 mila €), così le tre
-dimensioni restano confrontabili tra loro e con la modalità quantitativa.
+`"R"`, `"I"`, `"D"`.
+
+#### Criteri di impatto dell'organizzazione (configurabili)
+
+Ogni organizzazione stabilisce cosa significa ciascun livello di impatto in **euro** e
+in **ore di fermo**. I criteri stanno in un file JSON: si parte da
+[`config/criteri_impatto.json`](config/criteri_impatto.json), lo si copia e lo si adatta.
+
+```json
+{
+  "organizzazione": "Nome S.r.l.",
+  "valuta": "€",
+  "soglie_economiche": [2000, 10000, 50000, 250000],
+  "fermo_tollerabile_ore": [4, 24, 72, 168]
+}
+```
+
+- `soglie_economiche`: limiti superiori dei livelli 1, 2, 3, 4; oltre l'ultimo il livello è 5
+- `fermo_tollerabile_ore`: sotto 4 ore livello 5, sotto 24 livello 4, sotto 72 livello 3,
+  sotto 168 livello 2, altrimenti 1
+
+Con i valori predefiniti:
+
+| Livello | Danno economico | Fermo tollerabile |
+|---|---|---|
+| 1 | fino a 2.000 € | 168 ore o più |
+| 2 | 2.000 – 10.000 € | 72 – 168 ore |
+| 3 | 10.000 – 50.000 € | 24 – 72 ore |
+| 4 | 50.000 – 250.000 € | 4 – 24 ore |
+| 5 | oltre 250.000 € | meno di 4 ore |
+
+Con i criteri si può costruire l'asset direttamente dalle **stime di danno in euro**, e
+ricavare il danno tipico di uno scenario come prima stima della SLE:
+
+```python
+from risk_analysis import Asset, ImpactCriteria
+
+criteri = ImpactCriteria.load("config/criteri_alfa.json")
+print(criteri.describe())
+
+crm = Asset.from_estimates("CRM", loss_confidentiality=80_000, loss_integrity=15_000,
+                           tolerable_hours=36, criteria=criteri)   # → livelli 4, 3, 3
+crm.describe(criteri)            # mostra le fasce in euro e in ore dell'organizzazione
+crm.impact_loss("R", criteri)    # danno tipico di un data breach (≈ 111.800 €)
+```
+
+Il danno tipico è la media geometrica degli estremi del livello (metà della prima soglia
+per il livello 1, il doppio dell'ultima per il livello 5): è un ponte tra qualitativo e
+quantitativo, ma per stime accurate conviene valutare il danno direttamente.
 
 In modalità quantitativa il modello calcola l'**ALE** (perdita annua attesa):
 
@@ -212,9 +258,11 @@ risk_analysis/
   core.py             scale, input e risultati
   models.py           modelli matematici
   classification.py   livelli di rischio
+  criteria.py         criteri di impatto configurabili (euro, ore di fermo)
   montecarlo.py       simulazione dell'incertezza
   register.py         registro dei rischi ed export CSV
   domains/            profili: sicurezza sul lavoro, cybersecurity, impatto R/I/D
+config/               criteri di impatto da adattare all'organizzazione
 examples/             script d'esempio
 tests/                test automatici
 ```
