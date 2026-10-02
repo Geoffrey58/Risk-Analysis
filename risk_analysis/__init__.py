@@ -5,7 +5,16 @@ P = probabilità dell'evento, M = magnitudo del danno, V = vulnerabilità del si
 
 from .classification import Classifier
 from .core import Mode, RiskInput, RiskResult, Scale
-from .domains import CYBERSECURITY, DOMAINS, SICUREZZA_LAVORO, Domain
+from .domains import (
+    CIA,
+    CYBERSECURITY,
+    DOMAINS,
+    SICUREZZA_LAVORO,
+    Asset,
+    Domain,
+    assess_scenario,
+    availability_from_downtime,
+)
 from .models import (
     Multiplicative,
     RiskAversion,
@@ -29,6 +38,10 @@ __all__ = [
     "DOMAINS",
     "CYBERSECURITY",
     "SICUREZZA_LAVORO",
+    "CIA",
+    "Asset",
+    "assess_scenario",
+    "availability_from_downtime",
     "RiskModel",
     "Multiplicative",
     "WeightedGeometric",

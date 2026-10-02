@@ -122,8 +122,44 @@ Scale 1-5, impostazione in linea con ISO/IEC 27005.
 | **M** impatto | Trascurabile | Limitato | Significativo | Grave | Critico |
 | **V** vulnerabilità | Molto bassa | Bassa | Media | Alta | Molto alta |
 
-- `impact_cia(c, i, a)` ricava M da riservatezza, integrità e disponibilità (massimo dei tre, o media)
 - livelli Basso / Medio / Alto / Critico, ancorati alla diagonale: i passaggi avvengono con P = M = V = 2, 3, 4
+
+#### Impatto M da riservatezza, integrità e disponibilità
+
+R, I e D (nel codice C, I, A, per non confondere la riservatezza con il rischio R)
+si valutano **sull'asset**, una volta sola: *cosa succede se perdo la riservatezza,
+l'integrità, la disponibilità di questo asset?*
+
+| | Riservatezza | Integrità | Disponibilità (fermo tollerabile) |
+|---|---|---|---|
+| 1 | informazioni pubbliche | errore irrilevante o subito evidente | oltre 1 settimana |
+| 2 | interne, nessun dato personale | correggibile, nessun effetto esterno | da 3 giorni a 1 settimana |
+| 3 | dati personali comuni, info commerciali riservate | decisioni o documenti errati verso terzi | da 1 a 3 giorni |
+| 4 | dati personali su larga scala, segreti industriali | errori contabili, contrattuali o legali | da 4 a 24 ore |
+| 5 | categorie particolari (art. 9 GDPR), credenziali privilegiate | effetti su persone, impianti, obblighi di legge | meno di 4 ore |
+
+Lo scenario indica poi **quali dimensioni la minaccia colpisce**, e M è il massimo
+tra quelle sole:
+
+$$M = \max\{C\,\delta_C,\; I\,\delta_I,\; A\,\delta_A\}, \qquad \delta = 1 \text{ se la dimensione è colpita}$$
+
+Così un guasto hardware conta solo la disponibilità, un data breach solo la riservatezza.
+
+```python
+from risk_analysis import Asset, RiskRegister, CYBERSECURITY, availability_from_downtime
+
+server = Asset("File server", confidentiality=3, integrity=3,
+               availability=availability_from_downtime(tolerable_hours=8))
+
+reg = RiskRegister(CYBERSECURITY)
+reg.add_scenario("C01", "Ransomware", server, affects="IA", P=3, V=3)
+reg.add_scenario("C02", "Guasto hardware", server, affects="A", P=2, V=4)
+```
+
+Le dimensioni si indicano con le lettere `"C"`, `"I"`, `"A"` oppure, all'italiana,
+`"R"`, `"I"`, `"D"`. Consiglio pratico: ancora ogni livello anche a una soglia
+economica dell'organizzazione (es. livello 3 = danno tra 10 e 50 mila €), così le tre
+dimensioni restano confrontabili tra loro e con la modalità quantitativa.
 
 In modalità quantitativa il modello calcola l'**ALE** (perdita annua attesa):
 
@@ -178,7 +214,7 @@ risk_analysis/
   classification.py   livelli di rischio
   montecarlo.py       simulazione dell'incertezza
   register.py         registro dei rischi ed export CSV
-  domains/            profili: sicurezza sul lavoro, cybersecurity
+  domains/            profili: sicurezza sul lavoro, cybersecurity, impatto R/I/D
 examples/             script d'esempio
 tests/                test automatici
 ```

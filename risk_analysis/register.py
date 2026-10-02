@@ -51,6 +51,26 @@ class RiskRegister:
         self.entries.append(entry)
         return entry
 
+    def add_scenario(
+        self,
+        code: str,
+        description: str,
+        asset,
+        affects,
+        P: float,
+        V: float,
+        model: Optional[RiskModel] = None,
+    ) -> RiskEntry:
+        """Scenario cyber su un asset: M è ricavato dalle dimensioni C, I, A colpite."""
+        from .domains.cia import assess_scenario
+
+        if any(e.code == code for e in self.entries):
+            raise ValueError(f"Codice rischio duplicato: {code}")
+        result = assess_scenario(asset, affects, P, V, model=model or self.model)
+        entry = RiskEntry(code, f"{description} [{asset.name}]", result)
+        self.entries.append(entry)
+        return entry
+
     def ranked(self) -> List[RiskEntry]:
         """Scenari ordinati dal rischio più alto al più basso.
 

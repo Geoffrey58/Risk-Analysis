@@ -6,8 +6,10 @@ Impostazione in linea con l'approccio di ISO/IEC 27005: il rischio di uno
 scenario dipende dalla verosimiglianza della minaccia (P), dall'impatto
 sull'asset (M) e dalla vulnerabilità sfruttata (V). Scale 1-5.
 
-L'impatto M si può ricavare da riservatezza, integrità e disponibilità con
-``impact_cia`` (per default si prende il massimo dei tre).
+L'impatto M si ricava dal profilo di riservatezza, integrità e disponibilità
+dell'asset, considerando solo le dimensioni colpite dalla minaccia: vedi
+``Asset`` e ``assess_scenario`` nel modulo ``cia``. ``impact_cia`` resta
+disponibile come scorciatoia quando lo scenario le colpisce tutte e tre.
 
 Le soglie sono ancorate alla diagonale: il passaggio di livello avviene quando
 tutti e tre i fattori valgono 2, 3 e 4. Con P = M = V = 3, ad esempio, il
