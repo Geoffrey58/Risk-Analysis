@@ -8,8 +8,9 @@ $$R = f(P, M, V)$$
 - **M** — magnitudo del danno conseguente
 - **V** — vulnerabilità del sistema esposto
 
-È pensato per essere applicato a più ambiti, con due profili già pronti:
-**sicurezza sul lavoro** e **cybersecurity**. Funziona in due modalità:
+È pensato per essere applicato a più ambiti, con tre profili già pronti:
+**sicurezza sul lavoro**, **cybersecurity** e **impatto dei sistemi di IA sulle persone**
+(AI Act). Funziona in due modalità:
 
 | Modalità | P | M | V | R |
 |---|---|---|---|---|
@@ -29,6 +30,7 @@ Per eseguire gli esempi e i test:
 ```bash
 python examples/esempio_sicurezza_lavoro.py
 python examples/esempio_cybersecurity.py
+python examples/esempio_impatto_ia.py
 pip install -e ".[test]" && pytest
 ```
 
@@ -214,6 +216,76 @@ $$ALE = ARO \times V \times SLE, \qquad SLE = \text{valore asset} \times EF$$
 con funzioni di supporto `sle(...)`, `ale(...)` e `rosi(...)` per il ritorno
 dell'investimento in contromisure.
 
+### Impatto IA sulle persone (AI Act) — `IMPATTO_IA`
+
+Affianca la valutazione cyber senza sostituirla: la valutazione di sicurezza delle
+informazioni guarda agli **asset** (riservatezza, integrità, disponibilità), questa
+guarda alle **persone** su cui ricadono gli effetti di un sistema di IA (salute,
+sicurezza e diritti fondamentali, nella logica degli artt. 9 e 27 del Regolamento
+(UE) 2024/1689). Scale 1-5, stesse soglie del profilo cyber, così i livelli delle due
+valutazioni sono confrontabili.
+
+| | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| **P** evento | Rara | Improbabile | Possibile | Probabile | Quasi certa |
+| **M** gravità per le persone | Trascurabile | Limitato | Significativo | Grave | Critico |
+| **V** carenza delle misure | Molto bassa | Bassa | Media | Alta | Molto alta |
+
+V misura quanto sono carenti supervisione umana, verifica degli output, trasparenza,
+formazione e controlli documentati (5 = output usato direttamente, senza supervisione).
+
+L'oggetto è il **caso d'uso** (`CasoUso`): un sistema impiegato per una finalità su
+certe categorie di persone. Per ogni caso d'uso si stima la gravità della lesione di
+sei interessi:
+
+| Lettera | Interesse |
+|---|---|
+| S | Salute e sicurezza |
+| R | Riservatezza e dati personali |
+| N | Non discriminazione ed equità |
+| D | Dignità e correttezza del trattamento |
+| I | Informazione corretta e autodeterminazione |
+| E | Effetti economici e giuridici |
+
+Come per R, I, D sugli asset, lo scenario indica quali interessi colpisce e M è il
+massimo tra quelli, **aggravato di un livello** (fino a 5) se il caso d'uso coinvolge
+persone vulnerabili, opera su larga scala o produce effetti difficilmente reversibili:
+
+$$M = \min\left(5,\; \max_k \{L_k\,\delta_k\} + \text{aggravio}\right)$$
+
+Prima del calcolo il caso d'uso è classificato (`ClasseAIAct`): una pratica vietata
+dall'art. 5 non si valuta e ha livello "Vietato".
+
+```python
+from risk_analysis import IMPATTO_IA, CasoUso, RiskRegister
+
+solleciti = CasoUso("Format di sollecito", sistema="Assistente generativo",
+                    finalita="redazione di modelli di sollecito", interessati="debitori",
+                    impatti={"D": 3, "I": 3, "R": 2}, vulnerabili=True)
+
+reg = RiskRegister(IMPATTO_IA, label="IA")
+reg.add_use_case("IA01", "Tono vessatorio o ingannevole", solleciti, affects="DI",
+                 P=3, V=5, V_residual=2, measures="verifica dei format prima dell'adozione")
+```
+
+## Rischio inerente e residuo, collegamenti tra valutazioni
+
+Tutti i metodi di inserimento nel registro (`add`, `add_scenario`, `add_use_case`)
+accettano:
+
+- `V_residual`: vulnerabilità dopo le misure; il registro calcola anche il **rischio
+  residuo** a parità di P e M (le misure agiscono sulla vulnerabilità)
+- `measures`, `owner`: misure di mitigazione e responsabile del rischio (risk owner)
+- `links`: codici di rischi collegati, anche di un altro registro
+
+Più registri si esportano in un unico file con `to_csv_combined`, che aggiunge la
+colonna "Valutazione" (es. IA e ISMS):
+
+```python
+from risk_analysis import to_csv_combined
+to_csv_combined("registro_integrato.csv", [registro_ia, registro_isms])
+```
+
 ## Incertezza: simulazione Monte Carlo
 
 Quando le stime sono incerte, P, M e V si descrivono con distribuzioni:
@@ -261,7 +333,7 @@ risk_analysis/
   criteria.py         criteri di impatto configurabili (euro, ore di fermo)
   montecarlo.py       simulazione dell'incertezza
   register.py         registro dei rischi ed export CSV
-  domains/            profili: sicurezza sul lavoro, cybersecurity, impatto R/I/D
+  domains/            profili: sicurezza sul lavoro, cybersecurity, impatto R/I/D, impatto IA
 config/               criteri di impatto da adattare all'organizzazione
 examples/             script d'esempio
 tests/                test automatici

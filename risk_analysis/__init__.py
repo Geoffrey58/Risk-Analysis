@@ -10,6 +10,11 @@ from .domains import (
     CIA,
     CYBERSECURITY,
     DOMAINS,
+    IMPATTO_IA,
+    CasoUso,
+    ClasseAIAct,
+    Interesse,
+    assess_use_case,
     SICUREZZA_LAVORO,
     Asset,
     Domain,
@@ -25,7 +30,7 @@ from .models import (
     compare,
 )
 from .montecarlo import PERT, Fixed, Triangular, Uniform, simulate
-from .register import RiskRegister
+from .register import RiskRegister, to_csv_combined
 
 __version__ = "0.1.0"
 
@@ -57,4 +62,10 @@ __all__ = [
     "Triangular",
     "PERT",
     "RiskRegister",
+    "to_csv_combined",
+    "IMPATTO_IA",
+    "CasoUso",
+    "ClasseAIAct",
+    "Interesse",
+    "assess_use_case",
 ]

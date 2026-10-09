@@ -65,4 +65,4 @@ def test_registro_ordinamento_e_csv(tmp_path):
         rows = list(csv.reader(fh, delimiter=";"))
     assert rows[0][0] == "Codice"
     assert rows[1][0] == "R02"
-    assert rows[1][-1] == "Molto alto"
+    assert rows[1][rows[0].index("Livello")] == "Molto alto"
